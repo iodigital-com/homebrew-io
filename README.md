@@ -26,3 +26,4 @@ brew untap iodigital-com/io
 | Formula | Description |
 |---------|-------------|
 | `claudio` | CLI for switching between Claude Code projects with different API keys |
+| `lokex` | Utility tool to export localization strings from Lokalise |
