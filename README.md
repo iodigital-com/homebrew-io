@@ -26,3 +26,4 @@ brew untap iodigital-com/io
 | Formula | Description |
 |---------|-------------|
 | `claudio` | CLI for switching between Claude Code projects with different API keys |
+| `figex` | Utility tool to export styles and icons from Figma using the Figma REST API |
