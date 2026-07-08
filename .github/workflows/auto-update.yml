@@ -1,0 +1,128 @@
+name: Auto-update formulas
+
+on:
+  push:
+    branches: [feature/auto-update-action]
+  schedule:
+    - cron: "23 8 * * 1" # Weekly on Monday at 08:23 UTC
+  workflow_dispatch:
+
+jobs:
+  check-updates:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    strategy:
+      matrix:
+        formula:
+          - name: claudio
+            repo: iodigital-com/claudio
+            asset_type: source_tarball
+          - name: lokex
+            repo: iodigital-com/lokex
+            asset_type: zip
+            asset_pattern: "lokex-{version}.zip"
+          - name: figex
+            repo: iodigital-com/figex
+            asset_type: zip
+            asset_pattern: "figex-{version}.zip"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get latest release
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LATEST=$(gh api repos/${{ matrix.formula.repo }}/releases/latest --jq '.tag_name')
+          echo "tag=$LATEST" >> "$GITHUB_OUTPUT"
+
+          # Strip leading 'v' if present for version comparison
+          VERSION="${LATEST#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Get current version
+        id: current
+        run: |
+          FORMULA="Formula/${{ matrix.formula.name }}.rb"
+          if grep -q '^\s*version\s' "$FORMULA"; then
+            CURRENT=$(grep -m1 '^\s*version\s' "$FORMULA" | grep -oP '"\K[^"]+')
+          else
+            # Extract tag from URL: /download/<tag>/ or /tags/<tag>.tar.gz
+            URL_LINE=$(grep -m1 '^\s*url\s' "$FORMULA" | grep -oP '"\K[^"]+')
+            if echo "$URL_LINE" | grep -q '/download/'; then
+              CURRENT=$(echo "$URL_LINE" | grep -oP '/download/\K[^/]+')
+            else
+              CURRENT=$(basename "$URL_LINE" | sed 's/\.tar\.gz$//')
+            fi
+            CURRENT="${CURRENT#v}"
+          fi
+          echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
+
+      - name: Check if update needed
+        id: check
+        run: |
+          if [ "${{ steps.release.outputs.version }}" = "${{ steps.current.outputs.version }}" ]; then
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download and compute SHA256
+        if: steps.check.outputs.needed == 'true'
+        id: sha
+        run: |
+          VERSION="${{ steps.release.outputs.version }}"
+          TAG="${{ steps.release.outputs.tag }}"
+
+          if [ "${{ matrix.formula.asset_type }}" = "source_tarball" ]; then
+            URL="https://github.com/${{ matrix.formula.repo }}/archive/refs/tags/${TAG}.tar.gz"
+          else
+            PATTERN="${{ matrix.formula.asset_pattern }}"
+            ASSET_NAME="${PATTERN//\{version\}/$VERSION}"
+            URL="https://github.com/${{ matrix.formula.repo }}/releases/download/${TAG}/${ASSET_NAME}"
+          fi
+
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          SHA=$(curl -sL "$URL" | shasum -a 256 | cut -d ' ' -f1)
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Update formula
+        if: steps.check.outputs.needed == 'true'
+        run: |
+          FORMULA="Formula/${{ matrix.formula.name }}.rb"
+          VERSION="${{ steps.release.outputs.version }}"
+          URL="${{ steps.sha.outputs.url }}"
+          SHA="${{ steps.sha.outputs.sha256 }}"
+
+          sed -i "s|^\(\s*url\s\)\".*\"|\\1\"${URL}\"|" "$FORMULA"
+          sed -i "s|^\(\s*sha256\s\)\".*\"|\\1\"${SHA}\"|" "$FORMULA"
+
+          # Update version if explicitly set (not derived from url)
+          if grep -q '^\s*version\s' "$FORMULA"; then
+            sed -i "s|^\(\s*version\s\)\".*\"|\\1\"${VERSION}\"|" "$FORMULA"
+          fi
+
+      - name: Create Pull Request
+        if: steps.check.outputs.needed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          FORMULA="${{ matrix.formula.name }}"
+          VERSION="${{ steps.release.outputs.version }}"
+          BRANCH="auto-update/${FORMULA}-${VERSION}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b "$BRANCH"
+          git add "Formula/${FORMULA}.rb"
+          git commit -m "Update ${FORMULA} to ${VERSION}"
+          git push origin "$BRANCH"
+
+          gh pr create \
+            --title "Update ${FORMULA} to ${VERSION}" \
+            --body "Automated update of \`${FORMULA}\` formula to version \`${VERSION}\`." \
+            --base main \
+            --head "$BRANCH"

@@ -5,6 +5,11 @@ class Claudio < Formula
   sha256 "7d701f793fd1abd5c4a7ecd319b6a6851e161df7cafb6c79e06e272c9c22763e"
   license "MIT"
 
+  livecheck do
+    url :stable
+    strategy :github_latest
+  end
+
   depends_on "uv"
   depends_on "python@3.13"
 
