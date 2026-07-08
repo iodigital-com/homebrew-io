@@ -1,8 +1,6 @@
 name: Auto-update formulas
 
 on:
-  push:
-    branches: [feature/auto-update-action]
   schedule:
     - cron: "23 8 * * 1" # Weekly on Monday at 08:23 UTC
   workflow_dispatch:
