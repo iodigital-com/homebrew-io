@@ -2,7 +2,7 @@ name: Auto-update formulas
 
 on:
   schedule:
-    - cron: "23 8 * * 1" # Weekly on Monday at 08:23 UTC
+    - cron: "23 */6 * * *" # Every 6 hours
   workflow_dispatch:
 
 jobs:
