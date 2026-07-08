@@ -45,7 +45,19 @@ jobs:
       - name: Get current version
         id: current
         run: |
-          CURRENT=$(grep -m1 '^\s*version\s\|^\s*url\s' Formula/${{ matrix.formula.name }}.rb | grep -oP '[\d]+\.[\d]+[\.\d]*')
+          FORMULA="Formula/${{ matrix.formula.name }}.rb"
+          if grep -q '^\s*version\s' "$FORMULA"; then
+            CURRENT=$(grep -m1 '^\s*version\s' "$FORMULA" | grep -oP '"\K[^"]+')
+          else
+            # Extract tag from URL: /download/<tag>/ or /tags/<tag>.tar.gz
+            URL_LINE=$(grep -m1 '^\s*url\s' "$FORMULA" | grep -oP '"\K[^"]+')
+            if echo "$URL_LINE" | grep -q '/download/'; then
+              CURRENT=$(echo "$URL_LINE" | grep -oP '/download/\K[^/]+')
+            else
+              CURRENT=$(basename "$URL_LINE" | sed 's/\.tar\.gz$//')
+            fi
+            CURRENT="${CURRENT#v}"
+          fi
           echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
 
       - name: Check if update needed
