@@ -1,8 +1,8 @@
 class Figex < Formula
   desc "Utility tool to export styles and icons from Figma using the Figma REST API"
   homepage "https://github.com/iodigital-com/figex"
-  url "https://github.com/iodigital-com/figex/releases/download/1.0.29812851899/figex-1.0.29812851899.zip"
-  sha256 "1dc7883f5833ac0ce46c1fc2a0e44c9c5374f2703663eabda6b666beb8646f0e"
+  url "https://github.com/iodigital-com/figex/releases/download/1.0.36834034503/figex-1.0.36834034503.zip"
+  sha256 "e1c29943498efec08276267acc1669ba7a0795c015c9da1d7910e492a860cb5a"
   license "MIT"
 
   livecheck do
