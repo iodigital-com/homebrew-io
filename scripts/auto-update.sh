@@ -29,6 +29,11 @@ want() {
   return 1
 }
 
+if [ -n "$(git status --porcelain)" ]; then
+  echo "ERROR: working tree has uncommitted changes; commit or stash them first" >&2
+  exit 1
+fi
+
 git fetch origin main >/dev/null 2>&1 || true
 
 for entry in "${FORMULAS[@]}"; do
@@ -68,9 +73,8 @@ for entry in "${FORMULAS[@]}"; do
   fi
 
   echo "  downloading $URL for sha256..."
-  SHA=$(curl -sL "$URL" | shasum -a 256 | cut -d ' ' -f1)
-  if [ -z "$SHA" ]; then
-    echo "  ERROR: failed to compute sha256, skipping $NAME"
+  if ! SHA=$(curl -fsSL "$URL" | shasum -a 256 | cut -d ' ' -f1) || [ -z "$SHA" ]; then
+    echo "  ERROR: failed to download $URL, skipping $NAME"
     continue
   fi
 
