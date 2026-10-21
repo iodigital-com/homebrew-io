@@ -1,8 +1,8 @@
 class Claudio < Formula
   desc "CLI for switching between Claude Code projects with different API keys"
   homepage "https://github.com/iodigital-com/claudio"
-  url "https://github.com/iodigital-com/claudio/archive/refs/tags/0.2.0.tar.gz"
-  sha256 "7d701f793fd1abd5c4a7ecd319b6a6851e161df7cafb6c79e06e272c9c22763e"
+  url "https://github.com/iodigital-com/claudio/archive/refs/tags/1.0.tar.gz"
+  sha256 "0852ebdb50bfc432aebedc6f2630a1c1d44166270c966e684597af689f9a536f"
   license "MIT"
 
   livecheck do
